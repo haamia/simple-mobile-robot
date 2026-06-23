@@ -36,7 +36,7 @@ base_link
 ## Robot Model
 
 <p align="center">
-  <img src="images/moddel3.png" width="700">
+  <img src="images/model3.png" width="700">
 </p>
 
 
