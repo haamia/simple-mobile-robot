@@ -4,11 +4,6 @@ This project presents a simple beginner-level mobile robot modeled using URDF an
 
 The robot consists of a mobile base, differential drive wheels, a caster wheel, and common robotic sensors such as a LiDAR, IMU, and depth camera. The project serves as a foundation for learning URDF, TF transformations, RViz visualization, and robot simulation workflows.
 
-## Robot Model
-
-<p align="center">
-  <img src="images/robot_model.png" width="700">
-</p>
 
 ## Robot Structure
 
@@ -38,6 +33,7 @@ base_link
 <p align="center">
   <img src="images/model3.png" width="700">
 </p>
+
 
 
 <p align="center">
