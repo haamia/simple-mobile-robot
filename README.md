@@ -48,7 +48,7 @@ base_link
 
 ## Tools Used
 
-- ROS 2
+- ROS2
 - URDF
 - RViz2
 
