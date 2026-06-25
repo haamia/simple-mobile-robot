@@ -1,64 +1,149 @@
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, TimerAction
+from launch.actions import (
+    IncludeLaunchDescription,
+    RegisterEventHandler,
+    OpaqueFunction,
+)
+from launch.event_handlers import OnProcessExit
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import PathJoinSubstitution
+
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 from ament_index_python.packages import get_package_share_directory
 
 import os
 import xacro
 
+
 def generate_launch_description():
 
-    pkg_path = get_package_share_directory(
-        'simple_mobile_robot'
-    )
+    def robot_state_publisher(context):
 
-    xacro_file = os.path.join(
-        pkg_path,
-        'urdf',
-        'simple_robot.urdf.xacro'
-    )
+        pkg_path = get_package_share_directory(
+            "simple_mobile_robot"
+        )
 
-    world_file = os.path.join(
-        pkg_path,
-        'worlds',
-        'empty.world'
-    )
+        xacro_file = os.path.join(
+            pkg_path,
+            "urdf",
+            "simple_robot.urdf.xacro"
+        )
 
-    robot_description = xacro.process_file(
-        xacro_file
-    ).toxml()
+        robot_description = xacro.process_file(
+            xacro_file
+        ).toxml()
 
-    robot_state_publisher = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        parameters=[
-            {'robot_description': robot_description}
-        ]
-    )
-
-    gazebo = ExecuteProcess(
-        cmd=['gz', 'sim', world_file],
-        output='screen'
-    )
-
-    spawn_robot = TimerAction(
-        period=5.0,
-        actions=[
+        return [
             Node(
-                package='ros_gz_sim',
-                executable='create',
-                arguments=[
-                    '-name', 'simple_mobile_robot',
-                    '-topic', 'robot_description'
+                package="robot_state_publisher",
+                executable="robot_state_publisher",
+                output="screen",
+                parameters=[
+                    {
+                        "robot_description": robot_description
+                    }
                 ],
-                output='screen'
             )
         ]
+
+    gazebo = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            [
+                PathJoinSubstitution(
+                    [
+                        FindPackageShare("ros_gz_sim"),
+                        "launch",
+                        "gz_sim.launch.py",
+                    ]
+                )
+            ]
+        ),
+        launch_arguments={
+            "gz_args": "-r empty.sdf"
+        }.items(),
     )
 
-    return LaunchDescription([
-        robot_state_publisher,
-        gazebo,
-        spawn_robot
-    ])
+    bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[
+            "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"
+        ],
+        output="screen",
+    )
+
+    spawn_robot = Node(
+        package="ros_gz_sim",
+        executable="create",
+        arguments=[
+            "-topic",
+            "robot_description",
+            "-name",
+            "simple_mobile_robot",
+            "-allow_renaming",
+            "true",
+        ],
+        output="screen",
+    )
+
+    joint_state_broadcaster = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "joint_state_broadcaster"
+        ],
+    )
+
+    diff_drive_controller = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=[
+            "diff_drive_controller",
+            "--param-file",
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("simple_mobile_robot"),
+                    "config",
+                    "controllers.yaml",
+                ]
+            ),
+        ],
+    )
+
+    return LaunchDescription(
+
+        [
+
+            gazebo,
+
+            bridge,
+
+            OpaqueFunction(
+                function=robot_state_publisher
+            ),
+
+            spawn_robot,
+
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=spawn_robot,
+                    on_exit=[
+                        joint_state_broadcaster
+                    ],
+                )
+            ),
+
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=joint_state_broadcaster,
+                    on_exit=[
+                        diff_drive_controller
+                    ],
+                )
+            ),
+
+        ]
+
+    )

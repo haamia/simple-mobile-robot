@@ -285,6 +285,62 @@
   <origin xyz="-0.15 0 -0.07" rpy="0 0 0"/>
  </joint>
 
+
+
+ <!--adding ros2 control -->
+ <ros2_control name="GazeboSimSystem" type="system">
+  <hardware>
+   <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+
+  <!--A plugin is like a software module that adds functionality.
+  #Gazebo doesn't automatically understand ROS motor commands.
+  #The plugin acts as a translator.
+  #ROS -> plugin -> Gazebo -->
+  
+  </hardware>
+
+  <joint name="left_wheel_joint">
+   <command_interface name="velocity">
+    <param name="min">-1</param>
+    <param name="max">1</param>
+   </command_interface>  <!--command  tell ros to control joint by giving velocity speed-->
+  
+   <state_interface name="position"/>  <!--feedback , it tell ros that u can read current position of joint-->
+   <state_interface name="velocity"/>  <!--feedback = reading the current wheel speed-->
+  </joint>
+
+  <joint name="right_wheel_joint">
+   <command_interface name="velocity">
+    <param name="min">-1</param>
+    <param name="max">1</param>
+   </command_interface>
+   <state_interface name="position"/>
+   <state_interface name="velocity"/>
+  </joint>
+
+ </ros2_control>
+
+ <!--adding the Gazebo plugin -->
+
+ <gazebo>
+
+  <plugin
+      filename="gz_ros2_control-system"
+      name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+
+    <ros>
+      <namespace></namespace>
+    </ros>
+
+    <parameters>
+      /media/zbook/New Volume/ros2_ws/install/simple_mobile_robot/share/simple_mobile_robot/config/controllers.yaml
+    </parameters>
+
+   </plugin>
+
+ </gazebo>
+
+
 </robot>
 
 
