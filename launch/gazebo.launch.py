@@ -1,3 +1,5 @@
+
+ 
 from launch import LaunchDescription
 from launch.actions import (
     IncludeLaunchDescription,
@@ -48,28 +50,37 @@ def generate_launch_description():
             )
         ]
 
+    world_file = os.path.join(
+    get_package_share_directory("simple_mobile_robot"),
+    "worlds",
+    "empty_with_sensors.sdf",
+     )
+
     gazebo = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
+    PythonLaunchDescriptionSource(
+        PathJoinSubstitution(
             [
-                PathJoinSubstitution(
-                    [
-                        FindPackageShare("ros_gz_sim"),
-                        "launch",
-                        "gz_sim.launch.py",
-                    ]
-                )
+                FindPackageShare("ros_gz_sim"),
+                "launch",
+                "gz_sim.launch.py",
             ]
-        ),
-        launch_arguments={
-            "gz_args": "-r empty.sdf"
-        }.items(),
-    )
+        )
+    ),
+    launch_arguments={
+        "gz_args": "-r " + world_file
+    }.items(),
+    ) 
 
     bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
         arguments=[
-            "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"
+          "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
+          "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
+          "/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
+          "/camera@sensor_msgs/msg/Image[gz.msgs.Image",
+          "/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo",
+          "/camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
         ],
         output="screen",
     )
@@ -147,3 +158,7 @@ def generate_launch_description():
         ]
 
     )
+    
+
+
+    
