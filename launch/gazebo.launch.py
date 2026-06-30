@@ -1,5 +1,3 @@
-
- 
 from launch import LaunchDescription
 from launch.actions import (
     IncludeLaunchDescription,
@@ -51,38 +49,51 @@ def generate_launch_description():
         ]
 
     world_file = os.path.join(
-    get_package_share_directory("simple_mobile_robot"),
-    "worlds",
-    "empty_with_sensors.sdf",
-     )
+        get_package_share_directory("simple_mobile_robot"),
+        "worlds",
+        "empty_with_sensors.sdf",
+    )
 
     gazebo = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-        PathJoinSubstitution(
-            [
-                FindPackageShare("ros_gz_sim"),
-                "launch",
-                "gz_sim.launch.py",
-            ]
-        )
-    ),
-    launch_arguments={
-        "gz_args": "-r " + world_file
-    }.items(),
-    ) 
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("ros_gz_sim"),
+                    "launch",
+                    "gz_sim.launch.py",
+                ]
+            )
+        ),
+        launch_arguments={
+            "gz_args": "-r " + world_file
+        }.items(),
+    )
 
     bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
         arguments=[
-          "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
-          "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
-          "/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
-          "/camera@sensor_msgs/msg/Image[gz.msgs.Image",
-          "/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo",
-          "/camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
+            "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
+            "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
+            "/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
+            "/camera@sensor_msgs/msg/Image[gz.msgs.Image",
+            "/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo",
+            "/camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
         ],
         output="screen",
+    )
+
+    # Fixes RViz "Could not transform" error: gz-sim's depth_camera sensor
+    # ignores gz_frame_id for PointCloud2 output and always publishes under
+    # an auto-generated scoped name. This grafts that frame onto the real TF tree.
+    depth_camera_tf = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        arguments=[
+            "0", "0", "0", "0", "0", "0",
+            "depth_camera_link",
+            "simple_mobile_robot/base_link/depth_camera"
+        ],
     )
 
     spawn_robot = Node(
@@ -124,19 +135,14 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-
         [
-
             gazebo,
-
             bridge,
-
+            depth_camera_tf,
             OpaqueFunction(
                 function=robot_state_publisher
             ),
-
             spawn_robot,
-
             RegisterEventHandler(
                 OnProcessExit(
                     target_action=spawn_robot,
@@ -145,7 +151,6 @@ def generate_launch_description():
                     ],
                 )
             ),
-
             RegisterEventHandler(
                 OnProcessExit(
                     target_action=joint_state_broadcaster,
@@ -154,11 +159,5 @@ def generate_launch_description():
                     ],
                 )
             ),
-
         ]
-
     )
-    
-
-
-    
